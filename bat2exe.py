@@ -7,6 +7,7 @@ import os.path
 import os
 
 file_beginning = """#include<stdlib.h>
+#include<stdio.h>
 
 #define ARRAY_LENGTH %ARRAY_LENGTH%
 
@@ -17,6 +18,7 @@ file_end = """};
 
 int main(){
     for(int i = 0; i<ARRAY_LENGTH; i++) {
+        printf("%s\\n", bat_lines[i]);
         system(bat_lines[i]);
     }
     return 0;
@@ -44,7 +46,7 @@ def main():
 
     for bat_command in file_in:
         if bat_command.strip() != "":
-            bat_command = bat_command.replace('"', '\\"')
+            bat_command = bat_command.replace("\\", "\\\\").replace('"', '\\"')
             commands_as_c_str += f'    "{chompnl(bat_command)}",\n'
         else:
             bat_file_size -= 1
@@ -59,7 +61,6 @@ def main():
 
     call(["gcc", c_file_path, "-o", file_out_path])
     call(["strip", file_out_path])
-    os.remove(c_file_path)
 
 
 if __name__ == "__main__":
