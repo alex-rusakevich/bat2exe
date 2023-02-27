@@ -5,6 +5,7 @@ from pathlib import Path
 from subprocess import call
 import os.path
 import os
+import argparse
 
 file_beginning = """#include<stdlib.h>
 #include<stdio.h>
@@ -18,7 +19,7 @@ file_end = """};
 
 int main(){
     for(int i = 0; i<ARRAY_LENGTH; i++) {
-        printf("%s\\n", bat_lines[i]);
+//@echo_off        printf("%s\\n", bat_lines[i]);
         system(bat_lines[i]);
     }
     return 0;
@@ -31,8 +32,45 @@ def chompnl(str_in: str) -> str:
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "input_file",
+        metavar="BAT_FILE_PATH",
+        type=str,
+        nargs=1,
+        help=".bat file to compile",
+    )
+    parser.add_argument(
+        "-o",
+        "--out",
+        type=str,
+        metavar="EXE_FILE_PATH",
+        help="resulting .exe file path",
+    )
+    parser.add_argument(
+        "-C",
+        "--no-c-remove",
+        action="store_true",
+        help="don't delete .c file with .exe code after exit",
+    )
+    parser.add_argument(
+        "-E",
+        "--no-echo",
+        action="store_true",
+        help="don't print all the commands while running",
+    )
+    args = parser.parse_args()
+
+    file_in_path = args.input_file[0]
+    file_out_path = ""
+    if not args.out:
+        file_out_path = os.path.splitext(file_in_path)[0] + ".exe"
+    else:
+        file_out_path = args.out
+        if not file_out_path.endswith(".exe"):
+            file_out_path += ".exe"
+
     global file_beginning, file_end
-    file_in_path, file_out_path = sys.argv[1:]
 
     file_in = open(file_in_path, "r", encoding="utf8")
     c_file_path = os.path.join(
@@ -54,6 +92,10 @@ def main():
     file_beginning = file_beginning.replace("%ARRAY_LENGTH%", str(bat_file_size))
     c_file.write(file_beginning)
     c_file.write(commands_as_c_str)
+
+    if not args.no_echo:
+        file_end = file_end.replace("//@echo_off", "")
+
     c_file.write(file_end)
 
     file_in.close()
@@ -61,6 +103,9 @@ def main():
 
     call(["gcc", c_file_path, "-o", file_out_path])
     call(["strip", file_out_path])
+
+    if not args.no_c_remove:
+        os.remove(c_file_path)
 
 
 if __name__ == "__main__":
